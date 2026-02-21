@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aromi Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <nav class="bg-white border-b p-4 flex justify-between items-center shadow-sm">
+        <span class="text-xl font-bold text-emerald-600">🌿 Aromi AI</span>
+        <button id="logoutBtn" class="text-slate-500 hover:text-red-500">Sign Out</button>
+    </nav>
+
+    <main class="max-w-6xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-fit">
+            <h2 class="text-lg font-bold mb-4">Daily Check-in</h2>
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Mood (1-10)</label>
+                    <input type="range" id="mood" min="1" max="10" class="w-full accent-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Energy (1-10)</label>
+                    <input type="range" id="energy" min="1" max="10" class="w-full accent-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Sleep (Hours)</label>
+                    <input type="number" id="sleep" class="w-full p-2 border rounded-lg" value="7">
+                </div>
+                <button id="syncBtn" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition">Update My Plan</button>
+            </div>
+        </section>
+
+        <section class="lg:col-span-2 space-y-6">
+            <div id="plan-container" class="bg-emerald-900 text-white p-8 rounded-3xl shadow-lg relative overflow-hidden min-h-[300px]">
+                <div id="loading" class="hidden absolute inset-0 bg-emerald-900/90 flex items-center justify-center z-10">
+                    <span class="animate-pulse">Aromi is thinking...</span>
+                </div>
+                <h2 class="text-2xl font-bold mb-6">Today's Adaptive Path</h2>
+                <div id="plan-data" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="p-4 bg-white/10 rounded-xl">
+                        <h3 class="font-bold text-emerald-300">Workout</h3>
+                        <p id="workout" class="text-sm mt-2 opacity-90">Ready for your stats...</p>
+                    </div>
+                    <div class="p-4 bg-white/10 rounded-xl">
+                        <h3 class="font-bold text-emerald-300">Nutrition</h3>
+                        <p id="meal" class="text-sm mt-2 opacity-90">Fueling up...</p>
+                    </div>
+                    <div class="p-4 bg-white/10 rounded-xl">
+                        <h3 class="font-bold text-emerald-300">Mindfulness</h3>
+                        <p id="mental" class="text-sm mt-2 opacity-90">Breathe...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border p-6">
+                <div id="chat-history" class="h-48 overflow-y-auto mb-4 text-sm space-y-2"></div>
+                <div class="flex gap-2">
+                    <input type="text" id="chat-input" placeholder="Ask Aromi anything..." class="flex-1 p-2 border rounded-lg outline-none">
+                    <button id="send-btn" class="bg-slate-800 text-white px-4 py-2 rounded-lg">Send</button>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
