@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Web Chatbot</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Marked.js for parsing Markdown from Gemini -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom scrollbar for chat area */
+        .chat-scroll::-webkit-scrollbar { width: 6px; }
+        .chat-scroll::-webkit-scrollbar-track { background: transparent; }
+        .chat-scroll::-webkit-scrollbar-thumb { background-color: #4b5563; border-radius: 20px; }
+        
+        /* Markdown styles */
+        .prose pre { background-color: #1f2937; color: #f3f4f6; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-top: 0.5rem; margin-bottom: 0.5rem;}
+        .prose code { background-color: #374151; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: monospace; }
+        .prose p { margin-bottom: 0.75rem; }
+        .prose p:last-child { margin-bottom: 0; }
+        .prose strong { font-weight: 700; color: #fff; }
+        .prose ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 0.75rem;}
+        .prose ol { list-style-type: decimal; margin-left: 1.5rem; margin-bottom: 0.75rem;}
+    </style>
+</head>
+<body class="bg-gray-900 text-white h-screen flex overflow-hidden font-sans">
+
+    <!-- Sidebar -->
+    <aside class="w-80 bg-gray-800 border-r border-gray-700 flex flex-col hidden md:flex">
+        <div class="p-6 border-b border-gray-700">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i class="fa-solid fa-sparkles text-blue-400"></i> Gemini AI
+            </h1>
+            <p class="text-xs text-gray-400 mt-1">Powered by Flask & Google Gemini</p>
+        </div>
+        
+        <div class="p-6 flex-1">
+            <label class="block text-sm font-medium text-gray-300 mb-2">⚙️ Settings</label>
+            <p class="text-xs text-gray-400 mb-2">Get your key from <a href="https://aistudio.google.com/" target="_blank" class="text-blue-400 hover:underline">Google AI Studio</a>.</p>
+            <input type="password" id="api-key" placeholder="Enter Gemini API Key..." 
+                   class="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+            
+            <div class="mt-8 bg-gray-700/50 p-4 rounded-lg">
+                <h3 class="text-sm font-medium text-gray-200 mb-1"><i class="fa-solid fa-lightbulb text-yellow-400"></i> Pro Tip</h3>
+                <p class="text-xs text-gray-400">Type <code>/image [prompt]</code> to generate an image!</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="flex-1 flex flex-col h-full bg-gray-900">
+        
+        <!-- Mobile Header -->
+        <header class="md:hidden bg-gray-800 border-b border-gray-700 p-4 flex justify-between items-center">
+            <h1 class="text-lg font-bold"><i class="fa-solid fa-sparkles text-blue-400"></i> Gemini AI</h1>
+            <button id="mobile-settings-btn" class="text-gray-400 hover:text-white"><i class="fa-solid fa-gear"></i></button>
+        </header>
+
+        <!-- Mobile Settings Panel (Hidden by default) -->
+        <div id="mobile-settings" class="hidden md:hidden bg-gray-800 border-b border-gray-700 p-4">
+            <input type="password" id="mobile-api-key" placeholder="Enter Gemini API Key..." 
+                   class="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-blue-500 mb-2">
+        </div>
+
+        <!-- Messages Container -->
+        <div id="chat-container" class="flex-1 overflow-y-auto p-4 sm:p-6 chat-scroll space-y-6">
+            <!-- Welcome Message -->
+            <div class="flex gap-4">
+                <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-robot text-sm"></i>
+                </div>
+                <div class="bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-none px-5 py-3 max-w-[85%]">
+                    <p class="text-sm text-gray-200">Hello! I'm ready to help. Please enter your API key in the settings and say hi! You can also type <code>/image [prompt]</code> for pictures.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-4 bg-gray-900 border-t border-gray-800">
+            <div class="max-w-4xl mx-auto relative flex items-center">
+                <input type="text" id="message-input" placeholder="Type a message or /image..." 
+                       class="w-full bg-gray-800 border border-gray-700 rounded-full pl-5 pr-14 py-3 text-sm focus:outline-none focus:border-gray-500 transition-colors shadow-sm"
+                       autocomplete="off">
+                <button id="send-btn" class="absolute right-2 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-blue-600 hover:bg-blue-500 text-white rounded-full flex items-center justify-center transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-paper-plane text-sm translate-y-[1px] -translate-x-[1px]"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // DOM Elements
+        const chatContainer = document.getElementById('chat-container');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const apiKeyInput = document.getElementById('api-key');
+        const mobileApiKeyInput = document.getElementById('mobile-api-key');
+        const mobileSettingsBtn = document.getElementById('mobile-settings-btn');
+        const mobileSettings = document.getElementById('mobile-settings');
+
+        // State
+        let chatHistory = [];
+        let isWaiting = false;
+
+        // Sync mobile and desktop API key inputs
+        apiKeyInput.addEventListener('input', (e) => mobileApiKeyInput.value = e.target.value);
+        mobileApiKeyInput.addEventListener('input', (e) => apiKeyInput.value = e.target.value);
+
+        // Toggle mobile settings
+        mobileSettingsBtn.addEventListener('click', () => {
+            mobileSettings.classList.toggle('hidden');
+        });
+
+        // Add message to UI
+        function appendMessage(role, content, type = 'text') {
+            const div = document.createElement('div');
+            div.className = `flex gap-4 ${role === 'user' ? 'flex-row-reverse' : ''}`;
+            
+            const avatar = role === 'user' 
+                ? `<div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-user text-sm"></i></div>`
+                : `<div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-robot text-sm"></i></div>`;
+
+            let innerContent = '';
+            if (type === 'image') {
+                innerContent = `<img src="${content}" alt="Generated Image" class="rounded-lg max-w-full w-72 h-auto shadow-md">`;
+            } else if (type === 'error') {
+                innerContent = `<p class="text-sm text-red-400"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ${content}</p>`;
+            } else {
+                // Parse markdown for text responses
+                innerContent = `<div class="prose prose-invert text-sm text-gray-200">${marked.parse(content)}</div>`;
+            }
+
+            const bubbleClass = role === 'user'
+                ? `bg-indigo-600 text-white rounded-2xl rounded-tr-none px-5 py-3 max-w-[85%]`
+                : `bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-none px-5 py-3 max-w-[85%]`;
+
+            div.innerHTML = `
+                ${avatar}
+                <div class="${bubbleClass}">
+                    ${innerContent}
+                </div>
+            `;
+            
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Handle sending messages
+        async function sendMessage() {
+            const text = messageInput.value.trim();
+            const key = apiKeyInput.value.trim();
+            
+            if (!text || isWaiting) return;
+
+            // 1. Add User Message to UI and History
+            appendMessage('user', text);
+            chatHistory.push({ role: 'user', content: text, type: 'text' });
+            messageInput.value = '';
+            
+            // 2. Set loading state
+            isWaiting = true;
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i>';
+
+            try {
+                // 3. Send to Flask Backend
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: text,
+                        api_key: key,
+                        history: chatHistory.filter(msg => msg.type !== 'image') // Exclude images from Gemini context
+                    })
+                });
+
+                const data = await response.json();
+
+                // 4. Handle Backend Response
+                if (data.type === 'error') {
+                    appendMessage('assistant', data.content, 'error');
+                } else if (data.type === 'image') {
+                    appendMessage('assistant', data.content, 'image');
+                    chatHistory.push({ role: 'assistant', content: data.content, type: 'image' });
+                } else {
+                    appendMessage('assistant', data.content, 'text');
+                    chatHistory.push({ role: 'assistant', content: data.content, type: 'text' });
+                }
+
+            } catch (error) {
+                appendMessage('assistant', 'Connection error to the backend server.', 'error');
+            } finally {
+                // Reset loading state
+                isWaiting = false;
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm translate-y-[1px] -translate-x-[1px]"></i>';
+            }
+        }
+
+        // Event Listeners
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
